@@ -1,0 +1,11 @@
+{
+  "name": "chatflow-1",
+  "version": "1.0.0",
+  "description": "A Python Flask app with Mermaid CLI",
+  "engines": {
+    "node": "14.x"
+  },
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^8.13.4"
+  }
+}
