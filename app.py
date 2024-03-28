@@ -1,20 +1,29 @@
-from flask import Flask, send_file, request, abort
+from flask import Flask, request, send_file, abort
+import openai
 import subprocess
 import tempfile
 import os
 
 app = Flask(__name__)
 
+openai.api_key = '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'
+
+def generate_mermaid_code(input_text):
+    response = openai.Completion.create(
+      engine="text-davinci-003",
+      prompt=f"Convert the following text to mermaid code:\n\n{input_text}",
+      temperature=0.7,
+      max_tokens=150
+    )
+    mermaid_code = response.choices[0].text.strip()
+    return mermaid_code
+
 def generate_mermaid_diagram(mermaid_code, output_file='diagram.png'):
-    # Write the Mermaid code to a temporary file
     with tempfile.NamedTemporaryFile('w', delete=False, suffix='.mmd') as tmp:
         tmp.write(mermaid_code)
-        tmp.flush()  # Flush to ensure all data is written to the file
+        tmp.flush()
 
-        # Specify the full path to the Mermaid CLI executable
         mmdc_path = '/app/node_modules/.bin/mmdc'
-
-        # Use the Mermaid CLI to generate the diagram
         try:
             subprocess.run([mmdc_path, '-i', tmp.name, '-o', output_file], check=True)
             print(f"Diagram saved as {output_file}")
@@ -28,10 +37,16 @@ def generate_mermaid_diagram(mermaid_code, output_file='diagram.png'):
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    mermaid_code = request.form.get('code')
-    if not mermaid_code:
-        abort(400, description="No Mermaid code provided.")
-
+    if 'file' in request.files:
+        file = request.files['file']
+        input_text = file.read().decode('utf-8')
+    else:
+        input_text = request.form.get('text')
+    
+    if not input_text:
+        abort(400, description="No input provided.")
+    
+    mermaid_code = generate_mermaid_code(input_text)
     output_file = 'mermaid_diagram.png'
     success = generate_mermaid_diagram(mermaid_code, output_file)
 
