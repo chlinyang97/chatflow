@@ -1,81 +1,40 @@
-# import mermaid
-
-# # Function to generate a diagram from Mermaid code
-# def generate_diagram(mermaid_code, output_file='diagram.png'):
-#     # Initialize the Mermaid object with the provided code
-#     m = mermaid.Mermaid(mermaid_code)
-    
-#     # Generate and save the diagram as an image file
-#     m.save_image(output_file)
-#     print(f"Diagram saved as {output_file}")
-
-# # Example Mermaid code
-# mermaid_code = """
-# flowchart TD
-#     A[User inputs a search query] --> B[Normalization]
-#     B --> C[Index Retrieval]
-#     C --> D[Ranking]
-#     D --> E[User Profile]
-#     E --> F[Context Awareness]
-#     F --> G[Formatting]
-#     G --> H[Display]
-#     H --> I[User Interaction]
-#     I --> J[Adjustment and Learning]
-#     J --> K[Performance Tracking]
-#     K --> L[Continuous Improvement]
-
-#     B -->|correcting typos, expanding abbreviations| B
-#     C -->|accesses an index to find products| C
-#     D -->|ranked by relevance, popularity, preferences| D
-#     E -->|tailor results based on user history| E
-#     F -->|consider user's location, time, trends| F
-#     I -->|monitor interactions with results| I
-#     J -->|improve search algorithm using feedback| J
-#     K -->|track search result relevance, speed| K
-#     L -->|refine algorithms, update index| L
-# """
-
-# # Generate and save the diagram
-# generate_diagram(mermaid_code)
-
+from flask import Flask, send_file, request, abort
 import subprocess
 import tempfile
+import os
 
-def generate_mermaid_diagram(mermaid_code, output_file='diagram.png'):
-    # Write the Mermaid code to a temporary file
+app = Flask(__name__)
+
+def generate_mermaid_diagram(mermaid_code, output_file):
     with tempfile.NamedTemporaryFile('w', delete=False, suffix='.mmd') as tmp:
         tmp.write(mermaid_code)
         tmp.flush()  # Flush to ensure all data is written to the file
 
         # Use the Mermaid CLI to generate the diagram
-        subprocess.run(['mmdc', '-i', tmp.name, '-o', output_file], check=True)
-        print(f"Diagram saved as {output_file}")
+        try:
+            subprocess.run(['mmdc', '-i', tmp.name, '-o', output_file], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error generating diagram: {e}")
+            return False
+        finally:
+            os.unlink(tmp.name)
+    
+    return True
 
-# Example Mermaid code
-mermaid_code = """
-flowchart TD
-    A[User inputs a search query] --> B[Normalization]
-    B --> C[Index Retrieval]
-    C --> D[Ranking]
-    D --> E[User Profile]
-    E --> F[Context Awareness]
-    F --> G[Formatting]
-    G --> H[Display]
-    H --> I[User Interaction]
-    I --> J[Adjustment and Learning]
-    J --> K[Performance Tracking]
-    K --> L[Continuous Improvement]
+@app.route('/generate', methods=['POST'])
+def generate():
+    mermaid_code = request.form.get('code')
+    if not mermaid_code:
+        abort(400, description="No Mermaid code provided.")
 
-    B -->|correcting typos, expanding abbreviations| B
-    C -->|accesses an index to find products| C
-    D -->|ranked by relevance, popularity, preferences| D
-    E -->|tailor results based on user history| E
-    F -->|consider user's location, time, trends| F
-    I -->|monitor interactions with results| I
-    J -->|improve search algorithm using feedback| J
-    K -->|track search result relevance, speed| K
-    L -->|refine algorithms, update index| L
-"""
+    output_file = 'mermaid_diagram.png'
+    success = generate_mermaid_diagram(mermaid_code, output_file)
 
-# Generate the diagram
-generate_mermaid_diagram(mermaid_code)
+    if success:
+        return send_file(output_file, mimetype='image/png')
+    else:
+        abort(500, description="Failed to generate diagram.")
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
