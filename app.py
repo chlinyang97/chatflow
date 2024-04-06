@@ -1,60 +1,25 @@
-from flask import Flask, request, send_file, abort
-import openai
-import subprocess
-import tempfile
-import os
+from flask import Flask, render_template_string
+import requests
 
 app = Flask(__name__)
 
-openai.api_key = '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'
-
-def generate_mermaid_code(input_text):
-    response = openai.Completion.create(
-      engine="text-davinci-003",
-      prompt=f"Convert the following text to mermaid code:\n\n{input_text}",
-      temperature=0.7,
-      max_tokens=150
-    )
-    mermaid_code = response.choices[0].text.strip()
-    return mermaid_code
-
-def generate_mermaid_diagram(mermaid_code, output_file='diagram.png'):
-    with tempfile.NamedTemporaryFile('w', delete=False, suffix='.mmd') as tmp:
-        tmp.write(mermaid_code)
-        tmp.flush()
-
-        mmdc_path = '/app/node_modules/.bin/mmdc'
-        try:
-            subprocess.run([mmdc_path, '-i', tmp.name, '-o', output_file], check=True)
-            print(f"Diagram saved as {output_file}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error generating diagram: {e}")
-            return False
-        finally:
-            os.unlink(tmp.name)
-
-    return True
-
-@app.route('/generate', methods=['POST'])
-def generate():
-    if 'file' in request.files:
-        file = request.files['file']
-        input_text = file.read().decode('utf-8')
-    else:
-        input_text = request.form.get('text')
+@app.route('/render')
+def render_mermaid_diagram():
+    # Fixed Mermaid code for testing
+    mermaid_code = 'graph TD; A-->B; B-->C; C-->D; D-->A;'
     
-    if not input_text:
-        abort(400, description="No input provided.")
+    # URL of the Mermaid Live Editor render endpoint
+    render_url = f'https://mermaid.ink/img/{mermaid_code}'
     
-    mermaid_code = generate_mermaid_code(input_text)
-    output_file = 'mermaid_diagram.png'
-    success = generate_mermaid_diagram(mermaid_code, output_file)
-
-    if success:
-        return send_file(output_file, mimetype='image/png')
+    # Get the diagram image from the Mermaid Live Editor
+    response = requests.get(render_url)
+    
+    if response.status_code == 200:
+        # Display the diagram image
+        img_url = response.url
+        return render_template_string('<img src="{{url}}" alt="Mermaid Diagram"/>', url=img_url)
     else:
-        abort(500, description="Failed to generate diagram.")
+        return 'Failed to render diagram', 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
