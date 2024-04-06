@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 
-@app.route('/render')
+@app.route('/')
 def render_mermaid_diagram():
     # Fixed Mermaid code for testing
     mermaid_code = 'graph TD; A-->B; B-->C; C-->D; D-->A;'
