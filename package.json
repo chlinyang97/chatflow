@@ -1,11 +1,14 @@
 {
   "name": "chatflow-1",
   "version": "1.0.0",
-  "description": "A Python Flask app with Mermaid CLI",
+  "description": "A Python Flask app using Pyppeteer for server-side Mermaid diagram rendering",
   "engines": {
     "node": "14.x"
   },
   "dependencies": {
     "@mermaid-js/mermaid-cli": "^8.13.4"
+  },
+  "scripts": {
+    "postinstall": "python -m playwright install"
   }
 }
